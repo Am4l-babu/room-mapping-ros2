@@ -1,0 +1,36 @@
+ROS2 workspace structure: /home/ros/ros2_ws
+
+Top-level folders:
+- .vscode/ : VS Code workspace settings (likely user/project editor settings)
+- build/   : build artifacts created by colcon (including package-specific build directories and intermediate CMake files)
+- install/ : installed package outputs, executables, libs, headers that are result of build + install step
+- log/     : colcon build run logs and diagnostics
+- src/     : source packages
+
+src/ packages:
+1. micro-ROS-Agent (in /home/ros/ros2_ws/src/micro-ROS-Agent)
+   - .git/, .github/, .gitignore, docs and project metadata
+   - 3rd-party-licenses.txt, CONTRIBUTING.md, LICENSE, NOTICE, README.md
+   - micro_ros_agent/ : actual agent implementation code
+   - snap/ : snapcraft packaging
+
+2. micro_ros_msgs (in /home/ros/ros2_ws/src/micro_ros_msgs)
+   - .git/, .github/, .gitignore etc.
+   - CHANGELOG.rst, CMakeLists.txt, CONTRIBUTING.md, LICENSE, README.md
+   - msg/ : ROS messages definitions (.msg files)
+   - package.xml : ROS package manifest, dependencies and metadata
+
+3. my_robot_description (in /home/ros/ros2_ws/src/my_robot_description)
+   - .git/, .github/, .gitignore etc.
+   - 3rd-party-licenses.txt, CONTRIBUTING.md, LICENSE, NOTICE, README.md
+   - micro_ros_agent/ (looks like a nested agent package; check package layout inside)
+   - snap/ (packaging)
+   - urdf/ : robot description files
+      - my_robot.urdf : URDF description of the robot model
+
+Current open file in editor: /home/ros/ros2_ws/src/my_robot_description/urdf/my_robot.urdf
+
+How to inspect code content quickly:
+- For ROS msg definitions: cat src/micro_ros_msgs/msg/*
+- For URDF: open src/my_robot_description/urdf/my_robot.urdf
+- For agent logic: inspect src/micro-ROS-Agent/micro_ros_agent/

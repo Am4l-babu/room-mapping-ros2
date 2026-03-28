@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""
+EKF (Extended Kalman Filter) configuration for sensor fusion
+PHASE 4: Accurate Localization using Encoder Odometry + IMU
+
+Dependencies: robot_localization package
+  sudo apt install ros-humble-robot-localization
+
+The EKF fuses:
+  - Odometry (/odom): Encoder-based position and velocity from ESP32
+  - IMU (/imu): Acceleration and angular velocity from MPU6050
+  
+Output:
+  - /odometry/filtered: Fused odometry with improved accuracy
+  - /pose/filtered: Filtered pose estimate
+  - TF: odom → base_link (via EKF)
+
+CRITICAL REQUIREMENT (Phase 2):
+  - All input timestamps MUST be synchronized and accurate
+  - Timestamp corruption MUST be fixed before using EKF
+  - This config is the reason for Phase 2 time sync implementation
+"""
+
+# Example EKF configuration for robot_localization
+# Save as: ~/ros2_ws/src/esp32_serial_bridge/config/ekf.yaml
+
+# Parameters for ekf_node (robot_localization)
+ekf_node:
+  ros__parameters:
+    # ========== GENERAL SETTINGS ==========
+    
+    # Frame IDs
+    frequency: 50              # 50 Hz processing
+    sensor_timeout: 2.0        # 2 sec timeout for sensor data
+    
+    # Map → base_link chain
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom         # fusion frame
+    
+    # ========== ODOMETRY INPUT ==========
+    # Source: ESP32 /odom (encoder-based)
+    # 100 Hz, high variance (encoders accumulate error)
+    
+    odom0: odom
+    odom0_config: [
+        true,   # x position
+        true,   # y position  
+        false,  # z position (robot moves in 2D)
+        false,  # roll
+        false,  # pitch
+        true,   # yaw
+        true,   # x velocity
+        true,   # y velocity
+        false,  # z velocity
+        false,  # roll rate
+        false,  # pitch rate
+        true,   # yaw rate
+        false,  # x accel
+        false,  # y accel
+        false   # z accel
+    ]
+    odom0_differential: false   # absolute position
+    odom0_relative: false
+    odom0_queue_size: 10
+    
+    # Large covariances for encoder odometry (accumulates drift)
+    odom0_pose_use_twist: false
+    odom0_twist_use_accel: false
+    
+    # ========== IMU INPUT ==========
+    # Source: ESP32 /imu (MPU6050)
+    # 50 Hz, lower variance, but noisy short-term
+    
+    imu0: imu
+    imu0_config: [
+        false,  # x position (IMU cannot estimate position alone)
+        false,  # y position
+        false,  # z position
+        true,   # roll - IMU provides accurate roll
+        true,   # pitch - IMU provides accurate pitch
+        false,  # yaw (use encoder yaw instead)
+        false,  # x velocity (not from IMU)
+        false,  # y velocity
+        false,  # z velocity
+        true,   # roll rate - angular velocity
+        true,   # pitch rate
+        true,   # yaw rate
+        true,   # x accel - keep for integration
+        true,   # y accel
+        true    # z accel
+    ]
+    imu0_differential: false
+    imu0_relative: true        # IMU data is relative (derivatives)
+    imu0_queue_size: 10
+    
+    # Remove IMU gravity bias in z
+    imu0_remove_gravitational_acceleration: true
+    
+    # ========== FILTER PARAMETERS ==========
+    
+    # Process noise (how much the state can change per step)
+    # Larger = more trust in measurements, less in model
+    process_noise_covariance: [
+        0.05,  0.0,   0.0,    0.0,    0.0,    0.0,
+        0.0,   0.05,  0.0,    0.0,    0.0,    0.0,
+        0.0,   0.0,   0.1,    0.0,    0.0,    0.0,
+        0.0,   0.0,   0.0,    0.03,   0.0,    0.0,
+        0.0,   0.0,   0.0,    0.0,    0.03,   0.0,
+        0.0,   0.0,   0.0,    0.0,    0.0,    0.03
+    ]
+    
+    # Initial state covariance
+    initial_state: [
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+        0.0,    0.0,    0.0,    0.0,    0.0,    0.0
+    ]
+    
+    initial_estimate_covariance: [
+        1.0,  0.0,  0.0,  0.0,  0.0,  0.0,
+        0.0,  1.0,  0.0,  0.0,  0.0,  0.0,
+        0.0,  0.0,  1.0,  0.0,  0.0,  0.0,
+        0.0,  0.0,  0.0,  1.0,  0.0,  0.0,
+        0.0,  0.0,  0.0,  0.0,  1.0,  0.0,
+        0.0,  0.0,  0.0,  0.0,  0.0,  1.0
+    ]
+    
+    # ========== OUTPUT ==========
+    print_diagnostics: true
+    publish_acceleration: false
+    publish_tf: true
+    
+    # Broadcast filtered TF
+    # Map (world) → odom → base_link
+    broadcast_transform_frame_id: false
+    
+    # Debug mode
+    debug: false
+    
+    # ========== ADVANCED SETTINGS ==========
+    
+    # Forgetting factors (how much to trust old history)
+    # Lower = more forgetting of history
+    # 1.0 = no forgetting
+    forgetting_factor: 0.99
+    
+    # Motion model noise (not using dynamic model)
+    use_control: false
+    
+    # Mahalanobis distance for outlier rejection
+    mahalanobis_distance_threshold: 4.0

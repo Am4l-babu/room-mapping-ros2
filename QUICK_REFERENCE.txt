@@ -1,0 +1,222 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                      QUICK COMMAND REFERENCE                              ║
+║                   Phase 2 PID Motor Control System                         ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+COMMON TASKS (Copy & Paste)
+════════════════════════════════════════════════════════════════════════════
+
+1. BUILD & UPLOAD ESP32 FIRMWARE
+   cd /home/ros/ros2_ws/sensor_testing && \
+   pio run -e motor_control_pid -t upload --upload-port /dev/ttyACM1
+
+2. MONITOR SERIAL OUTPUT (real-time feedback)
+   pio device monitor --port /dev/ttyACM1 --baud 115200
+
+3. BUILD ROS 2 PACKAGE
+   cd /home/ros/ros2_ws && \
+   colcon build --packages-select esp32_serial_bridge --symlink-install
+
+4. LAUNCH COMPLETE SYSTEM
+   source /home/ros/ros2_ws/install/setup.bash && \
+   ros2 launch esp32_serial_bridge slam.launch.py port:=/dev/ttyACM1
+
+5. MONITOR ODOMETRY FREQUENCY (in separate terminal)
+   source /home/ros/ros2_ws/install/setup.bash && \
+   ros2 topic hz /odom
+
+6. TEST MOTOR VELOCITY COMMAND (in separate terminal)
+   source /home/ros/ros2_ws/install/setup.bash && \
+   ros2 topic pub /cmd_vel geometry_msgs/Twist '{linear: {x: 0.2}}' -r 10
+
+7. VERIFY PHASE 2 SETUP
+   bash /home/ros/ros2_ws/verify_phase2_setup.sh
+
+8. CHECK ENCODER PULSES
+   (Send via serial monitor)
+   STATUS
+
+════════════════════════════════════════════════════════════════════════════
+
+SERIAL COMMANDS (Type directly in `pio device monitor`)
+════════════════════════════════════════════════════════════════════════════
+
+VELOCITY CONTROL:
+  VEL:0.2,0.0        → Forward 0.2 m/s, no rotation
+  VEL:0.1,0.5        → Forward with left turn (angular: 0.5 rad/s)
+  VEL:-0.1,0.0       → Backward 0.1 m/s
+  VEL:0.0,1.0        → Spin left at 1.0 rad/s
+  VEL:0.0,0.0        → Stop (smooth deceleration)
+
+DIRECT RPM CONTROL (for testing):
+  RPM_SET:30,30      → Both motors at 30 RPM
+  RPM_SET:50,20      → Left fast, right slow (turn right)
+  RPM_SET:0,0        → Stop immediately
+
+EMERGENCY CONTROL:
+  STOP               → Smooth stop (ramps down)
+  ESTOP              → Emergency stop (immediate)
+
+DIAGNOSTICS:
+  STATUS             → Print current RPM, targets, errors
+  HELP               → Show available commands
+
+════════════════════════════════════════════════════════════════════════════
+
+ROS 2 MONITORING COMMANDS
+════════════════════════════════════════════════════════════════════════════
+
+# Monitor odometry update rate
+ros2 topic hz /odom
+
+# View odometry messages
+ros2 topic echo /odom
+
+# View transform tree
+ros2 run tf2_tools view_frames
+
+# List all active topics
+ros2 topic list
+
+# Monitor ROS 2 nodes
+ros2 node list
+
+# Check node info
+ros2 node info /robot_controller
+
+# Check ROS 2 logs
+cat ~/.ros/log/latest/robot_controller-*.log
+
+════════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING QUICK FIXES
+════════════════════════════════════════════════════════════════════════════
+
+Port already in use:
+  pkill -f "pio device monitor"
+  pkill -f "cat /dev/ttyACM"
+
+ROS 2 node crashes:
+  source /home/ros/ros2_ws/install/setup.bash
+  ros2 launch esp32_serial_bridge slam.launch.py port:=/dev/ttyACM1
+
+Motors not moving:
+  1. Check: Serial output shows "STATUS" without errors
+  2. Verify power connected to L298N motor driver
+  3. Check: GPIO 14,27,25 (Motor 1) and 26,33,32 (Motor 2) connections
+
+Encoder not counting:
+  1. Type: STATUS (should show non-zero pulses when motor spins)
+  2. Check: GPIO 4 (Encoder 1) and GPIO 5 (Encoder 2) connections
+  3. Verify: Pull-up resistors present on encoder signal lines
+
+Serial frozen:
+  Ctrl+C (exit monitor)
+  pkill -f pio
+  Restart
+
+════════════════════════════════════════════════════════════════════════════
+
+IMPORTANT FILES & LOCATIONS
+════════════════════════════════════════════════════════════════════════════
+
+Source Code:
+  /home/ros/ros2_ws/sensor_testing/include/pid_controller.h
+  /home/ros/ros2_ws/sensor_testing/src/motor_control_pid.cpp
+  /home/ros/ros2_ws/src/esp32_serial_bridge/esp32_serial_bridge/robot_controller_improved.py
+
+Configuration:
+  /home/ros/ros2_ws/sensor_testing/platformio.ini
+  /home/ros/ros2_ws/sensor_testing/include/motor_control_pid.h
+
+PID Tuning:
+  motor_control_pid.h: Lines with "PID_KP", "PID_KI", "PID_KD"
+  Default: Kp=1.2, Ki=0.3, Kd=0.1
+
+Documentation:
+  /home/ros/ros2_ws/PHASE2_UPGRADE_GUIDE.md (deployment)
+  /home/ros/ros2_ws/PID_TUNING_GUIDE.md (tuning)
+  /home/ros/ros2_ws/UPGRADE_SUMMARY.md (overview)
+  /home/ros/ros2_ws/SYSTEM_STATE_DOCUMENTATION.txt (full system)
+
+════════════════════════════════════════════════════════════════════════════
+
+KEY CONFIGURATION VALUES
+════════════════════════════════════════════════════════════════════════════
+
+Edit in motor_control_pid.h:
+
+UPDATE_FREQ_HZ 100              # Control frequency (Hz)
+PID_KP 1.2                      # Proportional gain
+PID_KI 0.3                      # Integral gain
+PID_KD 0.1                      # Derivative gain
+MAX_RPM 120.0                   # Motor RPM limit
+MIN_RPM 0.0                     # Motor minimum RPM
+MAX_ACCELERATION 50.0           # Ramp rate (RPM/sec)
+
+Robot parameters (robot_controller_improved.py):
+
+wheel_diameter = 0.065          # meters (65mm)
+wheel_separation = 0.18         # meters (180mm)
+max_speed = 0.5                 # m/s
+encoder_slots = 20              # per revolution
+
+════════════════════════════════════════════════════════════════════════════
+
+VERIFICATION CHECKLIST
+════════════════════════════════════════════════════════════════════════════
+
+Pre-Deployment:
+  ☐ ESP32 connected to USB (/dev/ttyACM1)
+  ☐ Motors wired to L298N driver
+  ☐ Encoders connected (GPIO 4, 5)
+  ☐ Power supply for motor driver connected
+  ☐ Wheels spin freely (no friction)
+
+Post-Upload:
+  ☐ Serial monitor shows "[PID] Motor control system initialized"
+  ☐ Type "HELP" - shows command menu
+  ☐ Type "STATUS" - shows RPM values
+
+ROS 2 Integration:
+  ☐ Build completes: "1 package finished"
+  ☐ Launch starts: All nodes started [INFO]
+  ☐ ros2 topic hz /odom shows ~100 Hz
+  ☐ Robot responds to /cmd_vel commands
+
+════════════════════════════════════════════════════════════════════════════
+
+PERFORMANCE METRICS TO CHECK
+════════════════════════════════════════════════════════════════════════════
+
+After deployment, verify these improvements:
+
+Motor Response Time:
+  Command: RPM_SET:50,50 then immediately STATUS
+  Expected: Reaches 50 RPM in < 1 second ✓
+
+Odometry Rate:
+  Command: ros2 topic hz /odom
+  Expected: Shows 100+ Hz (was 1 Hz) ✓
+
+Motor Stability:
+  Command: RPM_SET:30,30 then wait 5 seconds
+  Expected: Error < 1 RPM (was ±15 RPM) ✓
+
+Smooth Acceleration:
+  Command: VEL:0.5,0.0
+  Expected: Motors accelerate smoothly, no jerky motion ✓
+
+════════════════════════════════════════════════════════════════════════════
+
+GETTING HELP
+════════════════════════════════════════════════════════════════════════════
+
+For detailed information, refer to:
+
+  Deployment → PHASE2_UPGRADE_GUIDE.md
+  Tuning     → PID_TUNING_GUIDE.md
+  Full Info  → SYSTEM_STATE_DOCUMENTATION.txt
+  Quick Cmd  → This file (QUICK_REFERENCE.txt)
+
+════════════════════════════════════════════════════════════════════════════

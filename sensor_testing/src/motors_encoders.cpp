@@ -130,13 +130,13 @@ void set_motor1_speed(int speed) {
     
     if (speed > 0) {
         // Forward
-        digitalWrite(MOTOR1_IN1, HIGH);
-        digitalWrite(MOTOR1_IN2, LOW);
+        digitalWrite(MOTOR1_IN1, LOW);
+        digitalWrite(MOTOR1_IN2, HIGH);
         ledcWrite(MOTOR1_PWM_CH, speed);
     } else if (speed < 0) {
         // Reverse
-        digitalWrite(MOTOR1_IN1, LOW);
-        digitalWrite(MOTOR1_IN2, HIGH);
+        digitalWrite(MOTOR1_IN1, HIGH);
+        digitalWrite(MOTOR1_IN2, LOW);
         ledcWrite(MOTOR1_PWM_CH, abs(speed));
     } else {
         // Stop
@@ -156,13 +156,13 @@ void set_motor2_speed(int speed) {
     
     if (speed > 0) {
         // Forward
-        digitalWrite(MOTOR2_IN3, HIGH);
-        digitalWrite(MOTOR2_IN4, LOW);
+        digitalWrite(MOTOR2_IN3, LOW);
+        digitalWrite(MOTOR2_IN4, HIGH);
         ledcWrite(MOTOR2_PWM_CH, speed);
     } else if (speed < 0) {
         // Reverse
-        digitalWrite(MOTOR2_IN3, LOW);
-        digitalWrite(MOTOR2_IN4, HIGH);
+        digitalWrite(MOTOR2_IN3, HIGH);
+        digitalWrite(MOTOR2_IN4, LOW);
         ledcWrite(MOTOR2_PWM_CH, abs(speed));
     } else {
         // Stop
