@@ -1,3 +1,15 @@
+# ============================================================================
+# CREDENTIALS & SENSITIVE DATA - NEVER COMMIT THESE!
+# ============================================================================
+sensor_testing/include/config.h
+robot_web_control/config.py
+.env
+.env.local
+.env.*.local
+*.secret
+*credentials*
+
+# ============================================================================
 # Build artifacts
 build/
 install/
